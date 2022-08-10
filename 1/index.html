@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="format-detection" content="email=no,telephone=no,address=no">
+<title>=^.^=</title>
+<style>
+body {margin: 0;}
+canvas {display: block;}
+</style>
+</head>
+<body>
+
+<div style="position: absolute; background: #fff">
+  <input type="color" id="color-input" value="#ffffff">
+</div>
+
+<script async src="https://unpkg.com/es-module-shims@1.5.13/dist/es-module-shims.js"></script>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.143.0/build/three.module.js"
+    }
+  }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+// import { OrbitControls } from 'https://unpkg.com/three@0.143.0/examples/jsm/controls/OrbitControls.js';
+import { GroundProjectedEnv } from 'https://unpkg.com/three@0.143.0/examples/jsm/objects/GroundProjectedEnv.js';
+import { GLTFLoader } from 'https://unpkg.com/three@0.143.0/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'https://unpkg.com/three@0.143.0/examples/jsm/loaders/DRACOLoader.js';
+import { EffectComposer } from 'https://unpkg.com/three@0.143.0/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://unpkg.com/three@0.143.0/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'https://unpkg.com/three@0.143.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'https://unpkg.com/three@0.143.0/examples/jsm/postprocessing/ShaderPass.js';
+import { GammaCorrectionShader } from 'https://unpkg.com/three@0.142.0/examples/jsm/shaders/GammaCorrectionShader.js';
+
+import CameraControls from 'https://unpkg.com/camera-controls@1.36.1/dist/camera-controls.module.js';
+
+CameraControls.install( { THREE } );
+
+const width  = window.innerWidth;
+const height = window.innerHeight;
+const clock = new THREE.Clock();
+
+const renderer = new THREE.WebGLRenderer( { antialias: true, stencil: false } );
+renderer.setSize( width, height );
+renderer.setPixelRatio( window.devicePixelRatio || 1 );
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.4;
+renderer.physicallyCorrectLights = true;
+renderer.outputEncoding = THREE.sRGBEncoding;
+document.body.appendChild( renderer.domElement );
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera( 75, width / height, 0.01, 1000 );
+camera.position.set( 0, 1, 5 );
+const controls = new CameraControls( camera, renderer.domElement );
+controls.maxPolarAngle = Math.PI * 0.5;
+
+const renderScene = new RenderPass( scene, camera );
+const gammaCorrectionPass = new ShaderPass( GammaCorrectionShader ); // linear color for PBR
+const bloomThreshold = 0.7;
+const bloomStrength = .8;
+const bloomRadius = 0;
+const bloomPass = new UnrealBloomPass( renderer.getSize( new THREE.Vector2() ), bloomStrength, bloomRadius, bloomThreshold );
+const composer = new EffectComposer( renderer );
+composer.addPass( renderScene );
+composer.addPass( bloomPass );
+composer.addPass( gammaCorrectionPass );
+
+const textureLoader = new THREE.TextureLoader();
+textureLoader.load( './env.webp', ( equirectangularMap ) => {
+
+  equirectangularMap.encoding = THREE.sRGBEncoding;
+  equirectangularMap.mapping = THREE.EquirectangularReflectionMapping;
+  const pmremGenerator = new THREE.PMREMGenerator( renderer );
+  pmremGenerator.compileEquirectangularShader();
+  const envMapRenderTarget = pmremGenerator.fromEquirectangular( equirectangularMap );
+  envMapRenderTarget.texture.encoding = THREE.sRGBEncoding;
+  scene.environment = envMapRenderTarget.texture;
+
+  const env = new GroundProjectedEnv( equirectangularMap );
+  env.scale.setScalar( 30 );
+  scene.add( env );
+  composer.render();
+
+  // equirectangularMap.dispose();
+
+} );
+
+scene.add( new THREE.HemisphereLight( 0x888888, 0x333333, .5 ) );
+
+// scene.add(
+//   new THREE.AxesHelper( 5 ),
+//   new THREE.GridHelper( 10, 10 ),
+// );
+
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath( 'https://unpkg.com/three@0.143.0/examples/js/libs/draco/' );
+
+const loader = new GLTFLoader();
+loader.setDRACOLoader( dracoLoader );
+
+const gltf = await loader.loadAsync( './lamborghini-urus.glb' );
+dracoLoader.dispose();
+
+const bodyMaterial = new THREE.MeshPhysicalMaterial( {
+  roughness: 0.3,
+  metalness: 0.05,
+  color: '#fff',
+  envMapIntensity: 0.75,
+  clearcoatRoughness: 0,
+  clearcoat: 1,
+} )
+
+gltf.scene.traverse( ( obj ) => {
+
+  if ( obj.isMesh ) {
+
+    const material = obj.material;
+
+
+    if ( material.name === 'WhiteCar' ) {
+
+      obj.material = bodyMaterial;
+
+    };
+
+    if ( material.name === 'FrameBlack' ) {
+      material.metalness = 0.75
+      material.roughness = 0;
+      material.color.set( 'black' );
+    };
+    // Wheels, change color from chrome to black matte
+    if ( material.name === 'Chrome' ) {
+      material.metalness = 1;
+      material.roughness = 0;
+      material.color.set( '#333' );
+    };
+    if ( material.name === 'BreakDiscs' ) {
+      material.metalness = 0.2;
+      material.roughness = 0.2;
+      material.color.set( '#555' );
+    };
+    if ( material.name === 'TiresGum' ) {
+      material.metalness = 0;
+      material.roughness = 0.4;
+      material.color.set( '#181818' );
+    };
+    if ( material.name === 'GreyElements' ) {
+      material.metalness = 0;
+      material.color.set( '#292929' );
+    };
+    // Make front and tail LEDs emit light
+    if ( material.name === 'emitbrake' ) {
+      material.emissiveIntensity = 3;
+      material.toneMapped = false;
+    };
+    if ( material.name === 'LightsFrontLed' ) {
+      material.emissiveIntensity = 3;
+      material.toneMapped = false;
+    };
+
+  }
+
+} );
+
+gltf.scene.scale.multiplyScalar( 0.01 );
+const bb = new THREE.Box3().expandByObject( gltf.scene );
+const {
+  x: carWidth,
+  y: carHeight,
+  z: carDepth,
+} = bb.getSize( new THREE.Vector3() );
+gltf.scene.position.y += carHeight * 0.5;
+scene.add( gltf.scene );
+
+const shadow = new THREE.Mesh(
+  new THREE.PlaneGeometry( carWidth, carDepth ),
+  new THREE.MeshBasicMaterial( {
+    map: new THREE.TextureLoader().load( './shadow.png', () => composer.render() ),
+    blending: THREE.MultiplyBlending,
+    toneMapped: false,
+  } ),
+);
+shadow.rotation.x = - Math.PI / 2;
+scene.add( shadow );
+
+
+
+( function anim () {
+
+  const delta = clock.getDelta();
+  // const elapsed = clock.getElapsedTime();
+
+  requestAnimationFrame( anim );
+  const hasControlsUpdated = controls.update( delta );
+  hasControlsUpdated && composer.render();
+
+} )();
+
+window.addEventListener( 'resize', () => {
+
+  const width	= window.innerWidth;
+  const height = window.innerHeight;
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize( width, height );
+  composer.render();
+
+} );
+
+document.getElementById( 'color-input' ).addEventListener( 'input', ( event ) => {
+
+  bodyMaterial.color.set( event.target.value );
+  composer.render();
+
+} );
+
+</script>
+
+</body>
+</html>
