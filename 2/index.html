@@ -46,9 +46,10 @@ renderer.outputEncoding = THREE.sRGBEncoding;
 document.body.appendChild( renderer.domElement );
 
 const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 75, width / height, 0.01, 1000 );
+const camera = new THREE.PerspectiveCamera( 75, width / height, 0.01, 100 );
 camera.position.set( 0, 1, 3 );
 const controls = new CameraControls( camera, renderer.domElement );
+controls.minDistance = .5;
 controls.setTarget( 0, .5, 0 );
 
 const textureLoader = new THREE.TextureLoader();
@@ -180,7 +181,17 @@ const config = {
         duration: 1,
       },
       0,
-    );
+    )
+    .to(
+      _sheenColor,
+      {
+        r: 0,
+        g: 0,
+        b: 0,
+        duration: 1,
+      },
+      0,
+    );;
 
   },
   gold() {
@@ -206,6 +217,26 @@ const config = {
         r: 1.000,
         g: 0.766,
         b: 0.336,
+        duration: 1,
+      },
+      0,
+    )
+    .to(
+      _attenuationColor,
+      {
+        r: 0,
+        g: 0,
+        b: 0,
+        duration: 1,
+      },
+      0,
+    )
+    .to(
+      _sheenColor,
+      {
+        r: 0,
+        g: 0,
+        b: 0,
         duration: 1,
       },
       0,
@@ -238,7 +269,27 @@ const config = {
         duration: 1,
       },
       0,
-    );
+    )
+    .to(
+      _attenuationColor,
+      {
+        r: 0,
+        g: 0,
+        b: 0,
+        duration: 1,
+      },
+      0,
+    )
+    .to(
+      _sheenColor,
+      {
+        r: 0,
+        g: 0,
+        b: 0,
+        duration: 1,
+      },
+      0,
+    );;
 
   },
   velvet() {
@@ -263,6 +314,16 @@ const config = {
       _color,
       {
         r: 0.92,
+        g: 0,
+        b: 0,
+        duration: 1,
+      },
+      0,
+    )
+    .to(
+      _attenuationColor,
+      {
+        r: 0,
         g: 0,
         b: 0,
         duration: 1,
@@ -305,6 +366,26 @@ const config = {
         r: 0.356862745,
         g: 0.423529412,
         b: 0.643137255,
+        duration: 1,
+      },
+      0,
+    )
+    .to(
+      _attenuationColor,
+      {
+        r: 0,
+        g: 0,
+        b: 0,
+        duration: 1,
+      },
+      0,
+    )
+    .to(
+      _sheenColor,
+      {
+        r: 0,
+        g: 0,
+        b: 0,
         duration: 1,
       },
       0,
